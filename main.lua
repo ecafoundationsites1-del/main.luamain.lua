@@ -1,7 +1,7 @@
 -- [[ 개발자 설정 구역 ]]
-local KEY_LINK = "https://your-link-here.com"
-local SECRET_KEY = "WasteTime_67"
-local BYPASS_ATTR = "AntiCheat_Ignore"
+local KEY_LINK = "https://your-link-here.com" -- 키 링크
+local SECRET_KEY = "WasteTime_67"              -- 비밀 키
+local BYPASS_ATTR = "AntiCheat_Ignore"         -- 안티치트 우회 속성
 
 -- [[ 시스템 서비스 ]]
 local Players = game:GetService("Players")
@@ -15,10 +15,11 @@ local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
 local isAutoFarm = false
 
--- [[ 캐릭터 재생성 시 변수 업데이트 ]]
+-- [[ 캐릭터 재생성 대응 로직 ]]
 player.CharacterAdded:Connect(function(newCharacter)
     character = newCharacter
     hrp = character:WaitForChild("HumanoidRootPart")
+    print("캐릭터가 갱신되었습니다. 오토팜 대기 중...")
 end)
 
 -- [[ 드래그 기능 함수 ]]
@@ -47,8 +48,8 @@ end
 
 -- [[ UI 생성 ]]
 local ScreenGui = Instance.new("ScreenGui", player.PlayerGui)
-ScreenGui.Name = "WasteTime_Final_V3"
-ScreenGui.ResetOnSpawn = false -- 캐릭터 죽어도 UI 안 사라지게 함
+ScreenGui.Name = "WasteTime_Final_Project"
+ScreenGui.ResetOnSpawn = false -- 캐릭터 죽어도 UI 안 사라짐
 
 -- [열기 버튼]
 local OpenBtn = Instance.new("TextButton", ScreenGui)
@@ -68,6 +69,7 @@ MainContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainContainer.BorderSizePixel = 0
 makeDraggable(MainContainer)
 
+-- [X 버튼]
 local CloseBtn = Instance.new("TextButton", MainContainer)
 CloseBtn.Size = UDim2.new(0, 30, 0, 30)
 CloseBtn.Position = UDim2.new(1, -35, 0, 5)
@@ -82,7 +84,7 @@ KeyFrame.BackgroundTransparency = 1
 
 local GetKeyBtn = Instance.new("TextButton", KeyFrame)
 GetKeyBtn.Size = UDim2.new(0, 260, 0, 45)
-GetKeyBtn.Position = UDim2.new(0.5, -130, 0.15, 0)
+GetKeyBtn.Position = UDim2.new(0.5, -130, 0.1, 0) -- 최상단 배치
 GetKeyBtn.Text = "Get Key (Link)"
 GetKeyBtn.BackgroundColor3 = Color3.fromRGB(55, 80, 200)
 GetKeyBtn.TextColor3 = Color3.new(1, 1, 1)
@@ -101,7 +103,7 @@ SubmitBtn.Text = "LOGIN"
 SubmitBtn.BackgroundColor3 = Color3.fromRGB(60, 160, 60)
 SubmitBtn.TextColor3 = Color3.new(1, 1, 1)
 
--- [메인 메뉴]
+-- [메인 메뉴 프레임]
 local MainFrame = Instance.new("Frame", MainContainer)
 MainFrame.Visible = false
 MainFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -148,8 +150,8 @@ OpenBtn.MouseButton1Click:Connect(function()
 end)
 
 GetKeyBtn.MouseButton1Click:Connect(function()
-    print("Key Link: " .. KEY_LINK)
-    KeyInput.Text = "Check Console (F9)"
+    print("Your Link: " .. KEY_LINK)
+    KeyInput.Text = "Check F9 Console"
 end)
 
 SubmitBtn.MouseButton1Click:Connect(function()
@@ -157,7 +159,7 @@ SubmitBtn.MouseButton1Click:Connect(function()
         KeyFrame.Visible = false
         MainFrame.Visible = true
     else
-        KeyInput.PlaceholderText = "WRONG!"
+        KeyInput.PlaceholderText = "WRONG KEY!"
         KeyInput.Text = ""
     end
 end)
@@ -168,7 +170,7 @@ AutoFarmBtn.MouseButton1Click:Connect(function()
     AutoFarmBtn.BackgroundColor3 = isAutoFarm and Color3.fromRGB(60, 160, 60) or Color3.fromRGB(150, 50, 50)
 end)
 
--- [[ 핵심 기능 로직 ]]
+-- [[ 핵심 오토팜 로직 ]]
 local function findYellowButton()
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") then
@@ -184,22 +186,23 @@ task.spawn(function()
     while true do
         task.wait(1)
         if isAutoFarm then
-            local waitSeconds = tonumber(IntervalInput.Text) or 780
-            task.wait(waitSeconds)
+            local waitSecs = tonumber(IntervalInput.Text) or 780
+            task.wait(waitSecs)
             
             if not isAutoFarm then continue end
             
             local button = findYellowButton()
-            -- hrp 변수는 CharacterAdded 연결에 의해 자동으로 최신화됨
             if button and hrp and hrp.Parent then
                 local lastPos = hrp.CFrame
                 character:SetAttribute(BYPASS_ATTR, true)
                 hrp.AssemblyLinearVelocity = Vector3.zero
                 
+                -- 이동 (버튼 위)
                 hrp.CFrame = CFrame.new(button.Position + Vector3.new(0, 3, 0))
                 
                 task.wait(tonumber(DelayInput.Text) or 1)
                 
+                -- 복귀 (0스터드)
                 if hrp and hrp.Parent then
                     hrp.AssemblyLinearVelocity = Vector3.zero
                     hrp.CFrame = lastPos
@@ -212,8 +215,10 @@ task.spawn(function()
     end
 end)
 
--- [[ 강제 퇴장 방지 ]]
+-- [[ 강제 퇴장 방지 (Anti-AFK) ]]
 player.Idled:Connect(function()
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new(0,0))
+    print("Anti-AFK Active")
 end)
+
