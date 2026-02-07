@@ -1,16 +1,16 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
 
 -- [설정값]
 local SECRET_KEY = "WasteTime_67"
-local AUTO_FARM_INTERVAL = 13 * 60 -- 13분
 local EONS_BUTTON_NAME = "Button"
 local BYPASS_ATTR = "AntiCheat_Ignore"
 
 -- [1. UI 생성]
-local ScreenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-ScreenGui.Name = "AprilFools_Fixed"
+local ScreenGui = Instance.new("ScreenGui", player.PlayerGui)
+ScreenGui.Name = "AprilFools_Hack_V2"
 
 -- 키 입력 프레임
 local KeyFrame = Instance.new("Frame", ScreenGui)
@@ -33,25 +33,46 @@ SubmitBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
 -- 메인 메뉴
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Visible = false
-MainFrame.Size = UDim2.new(0, 350, 0, 200)
-MainFrame.Position = UDim2.new(0.5, -175, 0.5, -100)
+MainFrame.Size = UDim2.new(0, 350, 0, 280)
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -140)
 MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+
+-- 시간 주기 설정 (분 단위)
+local IntervalLabel = Instance.new("TextLabel", MainFrame)
+IntervalLabel.Size = UDim2.new(0, 250, 0, 20)
+IntervalLabel.Position = UDim2.new(0.5, -125, 0.1, 0)
+IntervalLabel.Text = "Auto Farm Interval (Minutes):"
+IntervalLabel.BackgroundTransparency = 1
+IntervalLabel.TextColor3 = Color3.new(1,1,1)
+
+local IntervalInput = Instance.new("TextBox", MainFrame)
+IntervalInput.Size = UDim2.new(0, 250, 0, 40)
+IntervalInput.Position = UDim2.new(0.5, -125, 0.2, 0)
+IntervalInput.PlaceholderText = "Default: 13"
+IntervalInput.Text = "13"
+
+-- 텔레포트 지연 설정 (초 단위)
+local DelayLabel = Instance.new("TextLabel", MainFrame)
+DelayLabel.Size = UDim2.new(0, 250, 0, 20)
+DelayLabel.Position = UDim2.new(0.5, -125, 0.4, 0)
+DelayLabel.Text = "Teleport Delay (Seconds):"
+DelayLabel.BackgroundTransparency = 1
+DelayLabel.TextColor3 = Color3.new(1,1,1)
 
 local DelayInput = Instance.new("TextBox", MainFrame)
 DelayInput.Size = UDim2.new(0, 250, 0, 40)
-DelayInput.Position = UDim2.new(0.5, -125, 0.2, 0)
-DelayInput.PlaceholderText = "Delay (Default: 1)"
+DelayInput.Position = UDim2.new(0.5, -125, 0.5, 0)
+DelayInput.PlaceholderText = "Default: 1"
 DelayInput.Text = "1"
 
 local AutoFarmBtn = Instance.new("TextButton", MainFrame)
 AutoFarmBtn.Size = UDim2.new(0, 250, 0, 40)
-AutoFarmBtn.Position = UDim2.new(0.5, -125, 0.6, 0)
+AutoFarmBtn.Position = UDim2.new(0.5, -125, 0.75, 0)
 AutoFarmBtn.Text = "Auto Eons: OFF"
 AutoFarmBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
 
 -- [2. 핵심 함수]
 local function findTargetPart(name)
-    -- 가급적이면 FindFirstChild를 쓰는 것이 성능에 좋으나, 경로가 유동적이라면 Descendants 유지
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj.Name == name and obj:IsA("BasePart") then
             return obj
@@ -60,7 +81,6 @@ local function findTargetPart(name)
     return nil
 end
 
--- [3. 로직 연결]
 local isAutoFarm = false
 
 SubmitBtn.MouseButton1Click:Connect(function()
@@ -68,8 +88,8 @@ SubmitBtn.MouseButton1Click:Connect(function()
         KeyFrame.Visible = false
         MainFrame.Visible = true
     else
+        KeyInput.PlaceholderText = "Wrong!"
         KeyInput.Text = ""
-        KeyInput.PlaceholderText = "Wrong Key!"
     end
 end)
 
@@ -79,43 +99,42 @@ AutoFarmBtn.MouseButton1Click:Connect(function()
     AutoFarmBtn.BackgroundColor3 = isAutoFarm and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(150, 50, 50)
 end)
 
--- [4. 오토팜 루프]
+-- [3. 오토팜 루프 (시간 조정 적용)]
 task.spawn(function()
     while true do
-        task.wait(0.5) -- 반응성을 위해 루프 주기는 짧게 설정
-        
+        task.wait(1)
         if isAutoFarm then
-            local character = player.Character
-            local hrp = character and character:FindFirstChild("HumanoidRootPart")
-            local button = findTargetPart(EONS_BUTTON_NAME)
+            -- 유저가 입력한 시간(분)을 가져와서 초 단위로 계산
+            local minutes = tonumber(IntervalInput.Text) or 13
+            print("Next farm in " .. minutes .. " minutes...")
             
-            if hrp and button then
-                print("Starting Farm Cycle...")
+            task.wait(minutes * 60)
+            
+            if not isAutoFarm then continue end -- 대기 도중 껐을 경우 방지
+
+            local button = findTargetPart(EONS_BUTTON_NAME)
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            
+            if button and hrp then
                 local lastPos = hrp.CFrame
                 local delayTime = tonumber(DelayInput.Text) or 1
                 
-                -- 안티치트 우회 시도
+                -- 안티치트 일시 우회
                 character:SetAttribute(BYPASS_ATTR, true)
                 
-                -- 버튼으로 이동
-                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                -- 1. 버튼으로 이동
+                hrp.AssemblyLinearVelocity = Vector3.zero
                 hrp.CFrame = button.CFrame * CFrame.new(0, 3, 0)
                 
                 task.wait(delayTime)
                 
-                -- 원래 위치로 복귀
-                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                -- 2. 원래 위치 6스터드 위로 복귀
+                hrp.AssemblyLinearVelocity = Vector3.zero
                 hrp.CFrame = lastPos * CFrame.new(0, 6, 0)
                 
+                task.wait(1)
                 character:SetAttribute(BYPASS_ATTR, false)
-                print("Farm Cycle Completed. Waiting 13 minutes...")
-                
-                -- 13분 대기를 나눌 수 있게 처리 (중간에 껐을 때 바로 멈추도록)
-                local waited = 0
-                while waited < AUTO_FARM_INTERVAL and isAutoFarm do
-                    task.wait(1)
-                    waited = waited + 1
-                end
+                print("Farm Cycle Completed.")
             end
         end
     end
