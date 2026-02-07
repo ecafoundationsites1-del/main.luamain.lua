@@ -1,14 +1,19 @@
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
-local hrp = character:WaitForChild("HumanoidRootPart")
 
--- [1. UI 생성 부분]
+-- [설정값]
+local SECRET_KEY = "WasteTime_67"
+local AUTO_FARM_INTERVAL = 13 * 60 -- 13분
+local EONS_BUTTON_NAME = "Button"
+local BYPASS_ATTR = "AntiCheat_Ignore"
+
+-- [1. UI 생성]
 local ScreenGui = Instance.new("ScreenGui", player.PlayerGui)
-ScreenGui.Name = "AprilFoolsMenu"
+ScreenGui.Name = "AprilFools_Hack"
 
--- 키 입력 창
+-- 키 입력 프레임
 local KeyFrame = Instance.new("Frame", ScreenGui)
 KeyFrame.Size = UDim2.new(0, 300, 0, 150)
 KeyFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
@@ -26,75 +31,85 @@ SubmitBtn.Position = UDim2.new(0.5, -50, 0.7, -20)
 SubmitBtn.Text = "Login"
 SubmitBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
 
--- 메인 핵 메뉴 (처음엔 숨김)
+-- 메인 메뉴 (비공개 상태)
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Visible = false
-MainFrame.Size = UDim2.new(0, 350, 0, 250)
-MainFrame.Position = UDim2.new(0.5, -175, 0.5, -125)
+MainFrame.Size = UDim2.new(0, 350, 0, 200)
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -100)
 MainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 
 local DelayInput = Instance.new("TextBox", MainFrame)
 DelayInput.Size = UDim2.new(0, 250, 0, 40)
 DelayInput.Position = UDim2.new(0.5, -125, 0.2, 0)
-DelayInput.PlaceholderText = "Teleport Delay (seconds)"
-DelayInput.Text = "0.5"
+DelayInput.PlaceholderText = "Delay (Current: 1)"
+DelayInput.Text = "1"
 
 local AutoFarmBtn = Instance.new("TextButton", MainFrame)
 AutoFarmBtn.Size = UDim2.new(0, 250, 0, 40)
-AutoFarmBtn.Position = UDim2.new(0.5, -125, 0.5, 0)
+AutoFarmBtn.Position = UDim2.new(0.5, -125, 0.6, 0)
 AutoFarmBtn.Text = "Auto Eons: OFF"
 AutoFarmBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
 
--- [2. 로직 처리]
-local key = "WasteTime_67"
-local isAutoFarm = false
-local teleportDelay = 0.5
+-- [2. 핵심 함수: 경로 무관 파트 찾기]
+local function findTargetPart(name)
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj.Name == name and obj:IsA("BasePart") then
+            return obj
+        end
+    end
+    return nil
+end
 
--- 키 확인 로직
+-- [3. 로직 연결]
+local isAutoFarm = false
+
 SubmitBtn.MouseButton1Click:Connect(function()
-    if KeyInput.Text == key then
+    if KeyInput.Text == SECRET_KEY then
         KeyFrame.Visible = false
         MainFrame.Visible = true
     else
+        KeyInput.PlaceholderText = "Wrong!"
         KeyInput.Text = ""
-        KeyInput.PlaceholderText = "Wrong Key!"
     end
 end)
 
--- 오토팜 설정
 AutoFarmBtn.MouseButton1Click:Connect(function()
     isAutoFarm = not isAutoFarm
     AutoFarmBtn.Text = isAutoFarm and "Auto Eons: ON" or "Auto Eons: OFF"
     AutoFarmBtn.BackgroundColor3 = isAutoFarm and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(150, 50, 50)
 end)
 
--- [3. 오토팜 핵심 루프: 13분 주기]
+-- [4. 오토팜 루프]
 task.spawn(function()
     while true do
         task.wait(1)
         if isAutoFarm then
-            -- 13분 대기 (테스트를 위해 시간을 줄이려면 13 * 60 수정)
-            task.wait(13 * 60) 
+            print("Next Eons Farm in 13 minutes...")
+            task.wait(AUTO_FARM_INTERVAL)
             
-            local button = workspace:FindFirstChild("Button", true) -- Eons 발판 찾기
-            if button and isAutoFarm then
+            local button = findTargetPart(EONS_BUTTON_NAME)
+            local hrp = character:FindFirstChild("HumanoidRootPart")
+            
+            if button and hrp and isAutoFarm then
                 local lastPos = hrp.CFrame
-                teleportDelay = tonumber(DelayInput.Text) or 0.5
+                local delayTime = tonumber(DelayInput.Text) or 1
                 
-                -- 안티치트 우회 속성 활성화
-                character:SetAttribute("AntiCheat_Ignore", true)
+                -- 안티치트 일시 우회
+                character:SetAttribute(BYPASS_ATTR, true)
                 
-                -- 1. 발판으로 순간이동
+                -- 이동 1: 버튼 위치
+                hrp.AssemblyLinearVelocity = Vector3.zero
                 hrp.CFrame = button.CFrame * CFrame.new(0, 3, 0)
                 
-                -- 2. 설정된 지연 시간만큼 대기 (먹는 판정)
-                task.wait(teleportDelay)
+                task.wait(delayTime)
                 
-                -- 3. 원래 위치에서 6스터드 위로 이동
+                -- 이동 2: 원래 위치 6스터드 위로 복귀
+                hrp.AssemblyLinearVelocity = Vector3.zero
                 hrp.CFrame = lastPos * CFrame.new(0, 6, 0)
                 
                 task.wait(1)
-                character:SetAttribute("AntiCheat_Ignore", false)
+                character:SetAttribute(BYPASS_ATTR, false)
+                print("Farm Cycle Completed.")
             end
         end
     end
