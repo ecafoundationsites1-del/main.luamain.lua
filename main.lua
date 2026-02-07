@@ -1,7 +1,7 @@
 -- [[ 개발자 설정 구역 ]]
-local KEY_LINK = "https://your-link-here.com" -- 키 링크
-local SECRET_KEY = "WasteTime_67"              -- 비밀 키
-local BYPASS_ATTR = "AntiCheat_Ignore"         -- 안티치트 우회 속성
+local KEY_LINK = "https://your-link-here.com"
+local SECRET_KEY = "WasteTime_67"
+local BYPASS_ATTR = "AntiCheat_Ignore"
 
 -- [[ 시스템 서비스 ]]
 local Players = game:GetService("Players")
@@ -9,8 +9,17 @@ local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local player = Players.LocalPlayer
+
+-- 변수 초기화
 local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
 local isAutoFarm = false
+
+-- [[ 캐릭터 재생성 시 변수 업데이트 ]]
+player.CharacterAdded:Connect(function(newCharacter)
+    character = newCharacter
+    hrp = character:WaitForChild("HumanoidRootPart")
+end)
 
 -- [[ 드래그 기능 함수 ]]
 local function makeDraggable(frame)
@@ -38,8 +47,8 @@ end
 
 -- [[ UI 생성 ]]
 local ScreenGui = Instance.new("ScreenGui", player.PlayerGui)
-ScreenGui.Name = "WasteTime_Final_Project"
-ScreenGui.ResetOnSpawn = false
+ScreenGui.Name = "WasteTime_Final_V3"
+ScreenGui.ResetOnSpawn = false -- 캐릭터 죽어도 UI 안 사라지게 함
 
 -- [열기 버튼]
 local OpenBtn = Instance.new("TextButton", ScreenGui)
@@ -59,7 +68,6 @@ MainContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainContainer.BorderSizePixel = 0
 makeDraggable(MainContainer)
 
--- [X 버튼]
 local CloseBtn = Instance.new("TextButton", MainContainer)
 CloseBtn.Size = UDim2.new(0, 30, 0, 30)
 CloseBtn.Position = UDim2.new(1, -35, 0, 5)
@@ -67,7 +75,7 @@ CloseBtn.Text = "X"
 CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CloseBtn.TextColor3 = Color3.new(1, 1, 1)
 
--- [키 입력 프레임]
+-- [키 프레임]
 local KeyFrame = Instance.new("Frame", MainContainer)
 KeyFrame.Size = UDim2.new(1, 0, 1, 0)
 KeyFrame.BackgroundTransparency = 1
@@ -93,7 +101,7 @@ SubmitBtn.Text = "LOGIN"
 SubmitBtn.BackgroundColor3 = Color3.fromRGB(60, 160, 60)
 SubmitBtn.TextColor3 = Color3.new(1, 1, 1)
 
--- [메인 메뉴 프레임]
+-- [메인 메뉴]
 local MainFrame = Instance.new("Frame", MainContainer)
 MainFrame.Visible = false
 MainFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -113,7 +121,7 @@ createLabel("Auto Farm Interval (Seconds):", UDim2.new(0.5, -125, 0.1, 0), MainF
 local IntervalInput = Instance.new("TextBox", MainFrame)
 IntervalInput.Size = UDim2.new(0, 250, 0, 40)
 IntervalInput.Position = UDim2.new(0.5, -125, 0.2, 0)
-IntervalInput.Text = "780" -- 기본 13분
+IntervalInput.Text = "780"
 
 createLabel("Teleport Delay (Seconds):", UDim2.new(0.5, -125, 0.4, 0), MainFrame)
 local DelayInput = Instance.new("TextBox", MainFrame)
@@ -160,7 +168,7 @@ AutoFarmBtn.MouseButton1Click:Connect(function()
     AutoFarmBtn.BackgroundColor3 = isAutoFarm and Color3.fromRGB(60, 160, 60) or Color3.fromRGB(150, 50, 50)
 end)
 
--- [[ 핵심 기능: 발판 찾기 및 이동 ]]
+-- [[ 핵심 기능 로직 ]]
 local function findYellowButton()
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") then
@@ -182,25 +190,30 @@ task.spawn(function()
             if not isAutoFarm then continue end
             
             local button = findYellowButton()
-            local hrp = character:FindFirstChild("HumanoidRootPart")
-            if button and hrp then
+            -- hrp 변수는 CharacterAdded 연결에 의해 자동으로 최신화됨
+            if button and hrp and hrp.Parent then
                 local lastPos = hrp.CFrame
                 character:SetAttribute(BYPASS_ATTR, true)
                 hrp.AssemblyLinearVelocity = Vector3.zero
+                
                 hrp.CFrame = CFrame.new(button.Position + Vector3.new(0, 3, 0))
+                
                 task.wait(tonumber(DelayInput.Text) or 1)
-                hrp.AssemblyLinearVelocity = Vector3.zero
-                hrp.CFrame = lastPos * CFrame.new(0, 6, 0)
+                
+                if hrp and hrp.Parent then
+                    hrp.AssemblyLinearVelocity = Vector3.zero
+                    hrp.CFrame = lastPos
+                end
+                
                 task.wait(1)
-                character:SetAttribute(BYPASS_ATTR, false)
+                if character then character:SetAttribute(BYPASS_ATTR, false) end
             end
         end
     end
 end)
 
--- [[ 강제 퇴장 방지 (Anti-AFK) ]]
+-- [[ 강제 퇴장 방지 ]]
 player.Idled:Connect(function()
     VirtualUser:CaptureController()
     VirtualUser:ClickButton2(Vector2.new(0,0))
-    print("Anti-AFK: 잠수 강퇴를 방지했습니다.")
 end)
