@@ -37,10 +37,10 @@ end
 
 -- [[ UI 생성 ]]
 local ScreenGui = Instance.new("ScreenGui", player.PlayerGui)
-ScreenGui.Name = "WasteTime_AprilFools"
+ScreenGui.Name = "WasteTime_AprilFools_Final"
 ScreenGui.ResetOnSpawn = false
 
--- [열기 버튼 (작은 버튼)]
+-- [열기 버튼]
 local OpenBtn = Instance.new("TextButton", ScreenGui)
 OpenBtn.Size = UDim2.new(0, 50, 0, 50)
 OpenBtn.Position = UDim2.new(0, 50, 0, 50)
@@ -48,9 +48,9 @@ OpenBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 OpenBtn.Text = "UI"
 OpenBtn.TextColor3 = Color3.new(1, 1, 1)
 OpenBtn.Visible = false
-makeDraggable(OpenBtn) -- 작은 버튼도 드래그 가능
+makeDraggable(OpenBtn)
 
--- [메인 컨테이너 (키 프레임과 메인 메뉴를 담을 베이스)]
+-- [메인 컨테이너]
 local MainContainer = Instance.new("Frame", ScreenGui)
 MainContainer.Size = UDim2.new(0, 350, 0, 320)
 MainContainer.Position = UDim2.new(0.5, -175, 0.5, -160)
@@ -58,7 +58,7 @@ MainContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 MainContainer.BorderSizePixel = 0
 makeDraggable(MainContainer)
 
--- [X 버튼 (닫기)]
+-- [X 버튼]
 local CloseBtn = Instance.new("TextButton", MainContainer)
 CloseBtn.Size = UDim2.new(0, 30, 0, 30)
 CloseBtn.Position = UDim2.new(1, -35, 0, 5)
@@ -106,14 +106,17 @@ local function createLabel(text, pos, parent)
     lbl.Text = text
     lbl.TextColor3 = Color3.new(0.8, 0.8, 0.8)
     lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.SourceSans
+    lbl.TextSize = 14
     return lbl
 end
 
-createLabel("Auto Farm Interval (Minutes):", UDim2.new(0.5, -125, 0.1, 0), MainFrame)
+-- 주기 설정 (초 단위로 변경됨)
+createLabel("Auto Farm Interval (Seconds):", UDim2.new(0.5, -125, 0.1, 0), MainFrame)
 local IntervalInput = Instance.new("TextBox", MainFrame)
 IntervalInput.Size = UDim2.new(0, 250, 0, 40)
 IntervalInput.Position = UDim2.new(0.5, -125, 0.2, 0)
-IntervalInput.Text = "13"
+IntervalInput.Text = "780" -- 13분 = 780초 기본값
 
 createLabel("Teleport Delay (Seconds):", UDim2.new(0.5, -125, 0.4, 0), MainFrame)
 local DelayInput = Instance.new("TextBox", MainFrame)
@@ -129,8 +132,6 @@ AutoFarmBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
 AutoFarmBtn.TextColor3 = Color3.new(1, 1, 1)
 
 -- [[ UI 로직 ]]
-
--- 닫기/열기 토글
 CloseBtn.MouseButton1Click:Connect(function()
     MainContainer.Visible = false
     OpenBtn.Visible = true
@@ -141,7 +142,6 @@ OpenBtn.MouseButton1Click:Connect(function()
     OpenBtn.Visible = false
 end)
 
--- 로그인 및 기타 로직
 GetKeyBtn.MouseButton1Click:Connect(function()
     print("Your Key Link: " .. KEY_LINK)
     KeyInput.Text = "Check F9 Console"
@@ -163,7 +163,7 @@ AutoFarmBtn.MouseButton1Click:Connect(function()
     AutoFarmBtn.BackgroundColor3 = isAutoFarm and Color3.fromRGB(60, 160, 60) or Color3.fromRGB(150, 50, 50)
 end)
 
--- [[ 오토팜 루프 (동일) ]]
+-- [[ 오토팜 로직 ]]
 local function findYellowButton()
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") then
@@ -179,9 +179,12 @@ task.spawn(function()
     while true do
         task.wait(1)
         if isAutoFarm then
-            local waitMinutes = tonumber(IntervalInput.Text) or 13
-            task.wait(waitMinutes * 60)
+            -- 이제 분 단위가 아니라 입력된 숫자(초)만큼 그대로 기다립니다.
+            local waitSeconds = tonumber(IntervalInput.Text) or 780
+            task.wait(waitSeconds)
+            
             if not isAutoFarm then continue end
+            
             local button = findYellowButton()
             local hrp = character:FindFirstChild("HumanoidRootPart")
             if button and hrp then
@@ -189,9 +192,12 @@ task.spawn(function()
                 character:SetAttribute(BYPASS_ATTR, true)
                 hrp.AssemblyLinearVelocity = Vector3.zero
                 hrp.CFrame = CFrame.new(button.Position + Vector3.new(0, 3, 0))
+                
                 task.wait(tonumber(DelayInput.Text) or 1)
+                
                 hrp.AssemblyLinearVelocity = Vector3.zero
                 hrp.CFrame = lastPos * CFrame.new(0, 6, 0)
+                
                 task.wait(1)
                 character:SetAttribute(BYPASS_ATTR, false)
             end
