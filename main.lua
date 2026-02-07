@@ -1,12 +1,13 @@
 -- [[ 개발자 설정 구역 ]]
-local KEY_LINK = "https://your-link-here.com"
-local SECRET_KEY = "WasteTime_67"
-local BYPASS_ATTR = "AntiCheat_Ignore"
+local KEY_LINK = "https://your-link-here.com" -- 키 링크
+local SECRET_KEY = "WasteTime_67"              -- 비밀 키
+local BYPASS_ATTR = "AntiCheat_Ignore"         -- 안티치트 우회 속성
 
--- [[ 시스템 변수 ]]
+-- [[ 시스템 서비스 ]]
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 local isAutoFarm = false
@@ -37,7 +38,7 @@ end
 
 -- [[ UI 생성 ]]
 local ScreenGui = Instance.new("ScreenGui", player.PlayerGui)
-ScreenGui.Name = "WasteTime_AprilFools_Final"
+ScreenGui.Name = "WasteTime_Final_Project"
 ScreenGui.ResetOnSpawn = false
 
 -- [열기 버튼]
@@ -54,7 +55,7 @@ makeDraggable(OpenBtn)
 local MainContainer = Instance.new("Frame", ScreenGui)
 MainContainer.Size = UDim2.new(0, 350, 0, 320)
 MainContainer.Position = UDim2.new(0.5, -175, 0.5, -160)
-MainContainer.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+MainContainer.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainContainer.BorderSizePixel = 0
 makeDraggable(MainContainer)
 
@@ -65,7 +66,6 @@ CloseBtn.Position = UDim2.new(1, -35, 0, 5)
 CloseBtn.Text = "X"
 CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 CloseBtn.TextColor3 = Color3.new(1, 1, 1)
-CloseBtn.Font = Enum.Font.SourceSansBold
 
 -- [키 입력 프레임]
 local KeyFrame = Instance.new("Frame", MainContainer)
@@ -82,7 +82,7 @@ GetKeyBtn.TextColor3 = Color3.new(1, 1, 1)
 local KeyInput = Instance.new("TextBox", KeyFrame)
 KeyInput.Size = UDim2.new(0, 260, 0, 45)
 KeyInput.Position = UDim2.new(0.5, -130, 0.4, 0)
-KeyInput.PlaceholderText = "Paste Key Here..."
+KeyInput.PlaceholderText = "Paste Key..."
 KeyInput.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 KeyInput.TextColor3 = Color3.new(1, 1, 1)
 
@@ -106,17 +106,14 @@ local function createLabel(text, pos, parent)
     lbl.Text = text
     lbl.TextColor3 = Color3.new(0.8, 0.8, 0.8)
     lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.SourceSans
-    lbl.TextSize = 14
     return lbl
 end
 
--- 주기 설정 (초 단위로 변경됨)
 createLabel("Auto Farm Interval (Seconds):", UDim2.new(0.5, -125, 0.1, 0), MainFrame)
 local IntervalInput = Instance.new("TextBox", MainFrame)
 IntervalInput.Size = UDim2.new(0, 250, 0, 40)
 IntervalInput.Position = UDim2.new(0.5, -125, 0.2, 0)
-IntervalInput.Text = "780" -- 13분 = 780초 기본값
+IntervalInput.Text = "780" -- 기본 13분
 
 createLabel("Teleport Delay (Seconds):", UDim2.new(0.5, -125, 0.4, 0), MainFrame)
 local DelayInput = Instance.new("TextBox", MainFrame)
@@ -143,8 +140,8 @@ OpenBtn.MouseButton1Click:Connect(function()
 end)
 
 GetKeyBtn.MouseButton1Click:Connect(function()
-    print("Your Key Link: " .. KEY_LINK)
-    KeyInput.Text = "Check F9 Console"
+    print("Key Link: " .. KEY_LINK)
+    KeyInput.Text = "Check Console (F9)"
 end)
 
 SubmitBtn.MouseButton1Click:Connect(function()
@@ -152,7 +149,7 @@ SubmitBtn.MouseButton1Click:Connect(function()
         KeyFrame.Visible = false
         MainFrame.Visible = true
     else
-        KeyInput.PlaceholderText = "WRONG KEY!"
+        KeyInput.PlaceholderText = "WRONG!"
         KeyInput.Text = ""
     end
 end)
@@ -163,7 +160,7 @@ AutoFarmBtn.MouseButton1Click:Connect(function()
     AutoFarmBtn.BackgroundColor3 = isAutoFarm and Color3.fromRGB(60, 160, 60) or Color3.fromRGB(150, 50, 50)
 end)
 
--- [[ 오토팜 로직 ]]
+-- [[ 핵심 기능: 발판 찾기 및 이동 ]]
 local function findYellowButton()
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") then
@@ -179,7 +176,6 @@ task.spawn(function()
     while true do
         task.wait(1)
         if isAutoFarm then
-            -- 이제 분 단위가 아니라 입력된 숫자(초)만큼 그대로 기다립니다.
             local waitSeconds = tonumber(IntervalInput.Text) or 780
             task.wait(waitSeconds)
             
@@ -192,12 +188,9 @@ task.spawn(function()
                 character:SetAttribute(BYPASS_ATTR, true)
                 hrp.AssemblyLinearVelocity = Vector3.zero
                 hrp.CFrame = CFrame.new(button.Position + Vector3.new(0, 3, 0))
-                
                 task.wait(tonumber(DelayInput.Text) or 1)
-                
                 hrp.AssemblyLinearVelocity = Vector3.zero
                 hrp.CFrame = lastPos * CFrame.new(0, 6, 0)
-                
                 task.wait(1)
                 character:SetAttribute(BYPASS_ATTR, false)
             end
@@ -205,3 +198,9 @@ task.spawn(function()
     end
 end)
 
+-- [[ 강제 퇴장 방지 (Anti-AFK) ]]
+player.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new(0,0))
+    print("Anti-AFK: 잠수 강퇴를 방지했습니다.")
+end)
